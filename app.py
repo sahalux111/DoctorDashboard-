@@ -1,9 +1,6 @@
-
-
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-import pywhatkit
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -11,9 +8,9 @@ app.secret_key = 'your_secret_key'
 # Simulated database
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
-    'SahalTest': {'password': generate_password_hash('1234'), 'role': 'doctor', 'whatsapp_number': '+918593969452'},
-    'DrArun': {'password': generate_password_hash('1234'), 'role': 'doctor', 'whatsapp_number': '+919544950920'},
-    'DrTest': {'password': generate_password_hash('1234'), 'role': 'doctor', 'whatsapp_number': '+918593064956'}
+    'SahalTest': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'DrArun': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'DrTest': {'password': generate_password_hash('1234'), 'role': 'doctor'}
 }
 
 available_doctors = {}
@@ -145,23 +142,6 @@ def update_break():
 
     return redirect(url_for('admin_control'))
 
-@app.route('/send_whatsapp', methods=['POST'])
-def send_whatsapp():
-    if 'username' not in session or session['role'] != 'admin':
-        return redirect(url_for('index'))
-
-    doctor = request.form['doctor']
-    pacs = request.form['pacs']
-    number_of_cases = request.form['number_of_cases']
-
-    # Construct the message
-    message_body = f"Hello {doctor}, you have been assigned {number_of_cases} cases in {pacs}."
-
-    # Send the message using pywhatkit
-    pywhatkit.sendwhatmsg_instantly(users[doctor]["whatsapp_number"], message_body, 10, True, 2)
-
-    return redirect(url_for('admin_control'))
-
 @app.route('/logout')
 def logout():
     session.pop('username', None)
@@ -170,3 +150,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
