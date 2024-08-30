@@ -5,59 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Control</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand img {
+            height: 40px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Admin Control</h1>
-            <div>
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary me-2">Back to Dashboard</a>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo">
+            </a>
+            <div class="d-flex">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
                 <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
             </div>
         </div>
+    </nav>
+    <div class="container mt-5">
+        <h1>Admin Control</h1>
 
-        <h3 class="mb-4">Manage Doctor Availability</h3>
-        <form action="{{ url_for('update_schedule') }}" method="POST" class="mb-5">
-            <div class="mb-3">
-                <label for="doctor" class="form-label">Doctor</label>
-                <select class="form-select" id="doctor" name="doctor" required>
-                    {% for doctor in users if users[doctor]['role'] == 'doctor' %}
-                        <option value="{{ doctor }}">{{ doctor }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="start_date" class="form-label">Date</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" required>
-            </div>
-            <div class="mb-3">
-                <label for="start_time" class="form-label">Start Time</label>
-                <input type="time" class="form-control" id="start_time" name="start_time" required>
-            </div>
-            <div class="mb-3">
-                <label for="end_time" class="form-label">End Time</label>
-                <input type="time" class="form-control" id="end_time" name="end_time" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Schedule</button>
-        </form>
+        <div class="mb-4">
+            <h2>Manage Doctor Availability</h2>
+            <form action="{{ url_for('update_schedule') }}" method="POST">
+                <div class="mb-3">
+                    <label for="doctor" class="form-label">Select Doctor</label>
+                    <select id="doctor" name="doctor" class="form-select" required>
+                        {% for user, info in users.items() if info['role'] == 'doctor' %}
+                            <option value="{{ user }}">{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="start_time" class="form-label">Start Time</label>
+                    <input type="time" id="start_time" name="start_time" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="end_time" class="form-label">End Time</label>
+                    <input type="time" id="end_time" name="end_time" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Availability</button>
+            </form>
+        </div>
 
-        <h3 class="mb-4">Manage Doctor Breaks</h3>
-        <form action="{{ url_for('update_break') }}" method="POST">
-            <div class="mb-3">
-                <label for="doctor" class="form-label">Doctor</label>
-                <select class="form-select" id="doctor" name="doctor" required>
-                    {% for doctor in users if users[doctor]['role'] == 'doctor' %}
-                        <option value="{{ doctor }}">{{ doctor }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="break_duration" class="form-label">Break Duration (in minutes)</label>
-                <input type="number" class="form-control" id="break_duration" name="break_duration" required>
-            </div>
-            <button type="submit" class="btn btn-warning">Update Break</button>
-        </form>
+        <div class="mb-4">
+            <h2>Manage Doctor Breaks</h2>
+            <form action="{{ url_for('update_break') }}" method="POST">
+                <div class="mb-3">
+                    <label for="doctor_break" class="form-label">Select Doctor</label>
+                    <select id="doctor_break" name="doctor" class="form-select" required>
+                        {% for user, info in users.items() if info['role'] == 'doctor' %}
+                            <option value="{{ user }}">{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="break_duration" class="form-label">Break Duration (minutes)</label>
+                    <input type="number" id="break_duration" name="break_duration" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Break</button>
+            </form>
+        </div>
+
+        <div class="mb-4">
+            <h2>Users</h2>
+            <ul class="list-group">
+                {% for user, info in users.items() %}
+                    <li class="list-group-item">{{ user }} - Role: {{ info['role'] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="mb-4">
+            <h2>Doctor Availability</h2>
+            <ul class="list-group">
+                {% for doctor, (start_time, end_time) in available_doctors.items() %}
+                    <li class="list-group-item">{{ doctor }} - {{ start_time }} to {{ end_time }}</li>
+                {% endfor %}
+                {% if available_doctors|length == 0 %}
+                    <li class="list-group-item text-muted">No availability set</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="mb-4">
+            <h2>Doctor Breaks</h2>
+            <ul class="list-group">
+                {% for doctor, break_end in doctor_breaks.items() %}
+                    <li class="list-group-item">{{ doctor }} - On break until {{ break_end }}</li>
+                {% endfor %}
+                {% if doctor_breaks|length == 0 %}
+                    <li class="list-group-item text-muted">No breaks scheduled</li>
+                {% endif %}
+            </ul>
+        </div>
     </div>
 </body>
 </html>
-
