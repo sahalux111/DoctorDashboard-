@@ -5,12 +5,30 @@ from datetime import datetime, timedelta, timezone
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Simulated database
+# Updated simulated database with new passwords
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
-    'doctor1': {'password': generate_password_hash('password1'), 'role': 'doctor'},
-    'doctor2': {'password': generate_password_hash('password2'), 'role': 'doctor'},
-    'doctor3': {'password': generate_password_hash('password3'), 'role': 'doctor'}
+    'drmonika': {'password': generate_password_hash('drmonika321'), 'role': 'doctor'},
+    'dramit': {'password': generate_password_hash('dramit321'), 'role': 'doctor'},
+    'drshashank': {'password': generate_password_hash('drshashank321'), 'role': 'doctor'},
+    'drronak': {'password': generate_password_hash('drronak321'), 'role': 'doctor'},
+    'dranthony': {'password': generate_password_hash('dranthony321'), 'role': 'doctor'},
+    'droguntade': {'password': generate_password_hash('droguntade321'), 'role': 'doctor'},
+    'drsmitha': {'password': generate_password_hash('drsmitha321'), 'role': 'doctor'},
+    'drnikita': {'password': generate_password_hash('drnikita321'), 'role': 'doctor'},
+    'drkarim': {'password': generate_password_hash('drkarim321'), 'role': 'doctor'},
+    'drfakhri': {'password': generate_password_hash('drfakhri321'), 'role': 'doctor'},
+    'imugilteam': {'password': generate_password_hash('imugilteam321'), 'role': 'doctor'},
+    'drnamitha': {'password': generate_password_hash('drnamitha321'), 'role': 'doctor'},
+    'drsachin': {'password': generate_password_hash('drsachin321'), 'role': 'doctor'},
+    'drvivek': {'password': generate_password_hash('drvivek321'), 'role': 'doctor'},
+    'drraj': {'password': generate_password_hash('drraj321'), 'role': 'doctor'},
+    'rdlteam': {'password': generate_password_hash('rdlteam321'), 'role': 'doctor'},
+    'ishateam': {'password': generate_password_hash('ishateam321'), 'role': 'doctor'},
+    'drdeepak': {'password': generate_password_hash('drdeepak321'), 'role': 'doctor'},
+    'drsurendar': {'password': generate_password_hash('drsurendar321'), 'role': 'doctor'},
+    'qa1': {'password': generate_password_hash('password4'), 'role': 'qa'},  # Added QA users
+    'qa2': {'password': generate_password_hash('password5'), 'role': 'qa'}
 }
 
 available_doctors = {}
@@ -49,8 +67,8 @@ def dashboard():
     upcoming_scheduled = {}
     breaks = {}
 
-    if session['role'] == 'admin':
-        # Admin can see all doctors' availability and breaks
+    if session['role'] in ['admin', 'qa']:
+        # Admins and QA users can see all doctors' availability and breaks
         for doctor, (start_time, end_time) in available_doctors.items():
             start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
             end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
@@ -125,14 +143,14 @@ def take_break():
 
 @app.route('/admin_control')
 def admin_control():
-    if 'username' not in session or session['role'] != 'admin':
+    if 'username' not in session or session['role'] not in ['admin', 'qa']:
         return redirect(url_for('index'))
 
     return render_template('admin_control.html', users=users, available_doctors=available_doctors, doctor_breaks=doctor_breaks)
 
 @app.route('/update_schedule', methods=['POST'])
 def update_schedule():
-    if 'username' not in session or session['role'] != 'admin':
+    if 'username' not in session or session['role'] not in ['admin', 'qa']:
         return redirect(url_for('index'))
 
     doctor = request.form['doctor']
@@ -149,7 +167,7 @@ def update_schedule():
 
 @app.route('/update_break', methods=['POST'])
 def update_break():
-    if 'username' not in session or session['role'] != 'admin':
+    if 'username' not in session or session['role'] not in ['admin', 'qa']:
         return redirect(url_for('index'))
 
     doctor = request.form['doctor']
