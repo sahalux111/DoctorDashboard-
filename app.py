@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -17,11 +16,11 @@ users = {
 available_doctors = {}
 doctor_breaks = {}
 
-# Define the IST timezone
-ist = pytz.timezone('Asia/Kolkata')
+# Define IST offset
+IST_OFFSET = timezone(timedelta(hours=5, minutes=30))
 
-def get_current_ist_time():
-    return datetime.now(ist)
+def get_ist_now():
+    return datetime.now(IST_OFFSET)
 
 @app.route('/')
 def index():
@@ -45,7 +44,7 @@ def dashboard():
     if 'username' not in session:
         return redirect(url_for('index'))
 
-    current_time = get_current_ist_time()
+    current_time = get_ist_now()
     available_now = {}
     upcoming_scheduled = {}
     breaks = {}
@@ -53,8 +52,8 @@ def dashboard():
     if session['role'] == 'admin':
         # Admin can see all doctors' availability and breaks
         for doctor, (start_time, end_time) in available_doctors.items():
-            start_time = ist.localize(datetime.strptime(start_time, '%Y-%m-%d %H:%M'))
-            end_time = ist.localize(datetime.strptime(end_time, '%Y-%m-%d %H:%M'))
+            start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
+            end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
 
             if start_time <= current_time <= end_time:
                 if doctor not in doctor_breaks or current_time > doctor_breaks[doctor]:
@@ -71,8 +70,8 @@ def dashboard():
         doctor = session['username']
         if doctor in available_doctors:
             start_time, end_time = available_doctors[doctor]
-            start_time = ist.localize(datetime.strptime(start_time, '%Y-%m-%d %H:%M'))
-            end_time = ist.localize(datetime.strptime(end_time, '%Y-%m-%d %H:%M'))
+            start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
+            end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
 
             if start_time <= current_time <= end_time:
                 if doctor not in doctor_breaks or current_time > doctor_breaks[doctor]:
@@ -104,8 +103,8 @@ def set_availability():
     start_time = request.form['start_time']
     end_time = request.form['end_time']
     
-    availability_start = ist.localize(datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M'))
-    availability_end = ist.localize(datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M'))
+    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
+    availability_end = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
 
     available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M'))
 
@@ -118,7 +117,7 @@ def take_break():
     
     doctor = session['username']
     break_duration = int(request.form['break_duration'])
-    break_end_time = get_current_ist_time() + timedelta(minutes=break_duration)
+    break_end_time = get_ist_now() + timedelta(minutes=break_duration)
 
     doctor_breaks[doctor] = break_end_time
 
@@ -141,8 +140,8 @@ def update_schedule():
     start_time = request.form['start_time']
     end_time = request.form['end_time']
     
-    availability_start = ist.localize(datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M'))
-    availability_end = ist.localize(datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M'))
+    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
+    availability_end = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M').replace(tzinfo=IST_OFFSET)
 
     available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M'))
 
@@ -155,7 +154,7 @@ def update_break():
 
     doctor = request.form['doctor']
     break_duration = int(request.form['break_duration'])
-    break_end_time = get_current_ist_time() + timedelta(minutes=break_duration)
+    break_end_time = get_ist_now() + timedelta(minutes=break_duration)
 
     doctor_breaks[doctor] = break_end_time
 
