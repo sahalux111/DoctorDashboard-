@@ -1,92 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RadBlox Radiologist Scheduler</title>
+    <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .navbar-brand img {
-            height: 40px;
+        body {
+            background-color: #f8f9fa;
+        }
+
+        h1, h3 {
+            color: #000000; /* Changed to black */
+        }
+
+        .list-group-item {
+            margin-bottom: 10px;
+            border-radius: 5px;
+            padding: 15px;
+            border: 1px solid #dddddd;
+        }
+
+        .bg-available {
+            background-color: #e9ecef;
+            border-left: 5px solid #28a745;
+        }
+
+        .bg-upcoming {
+            background-color: #e9ecef;
+            border-left: 5px solid #17a2b8;
+        }
+
+        .bg-break {
+            background-color: #e9ecef;
+            border-left: 5px solid #ffc107;
+        }
+
+        .btn-primary {
+            background-color: #000000;
+            border-color: #000000;
+        }
+
+        .btn-primary:hover {
+            background-color: #343a40;
+            border-color: #343a40;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+
+        .logo {
+            max-width: 150px;
         }
     </style>
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo">
-            </a>
-            <div class="d-flex">
-                <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
-            </div>
+    <div class="container my-5">
+        <div class="text-center mb-4">
+            <img src="static/images/logo.png" alt="Company Logo" class="logo mb-3">
+            <h1>Radblox Radiologist Scheduler</h1>
+            <p class="lead">Manage your availability, breaks, and view your schedule.</p>
         </div>
-    </nav>
-    <div class="container mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>RadBlox Radiologist Scheduler</h1>
-            {% if session['role'] == 'doctor' %}
-            <a href="{{ url_for('select_availability') }}" class="btn btn-primary">Select Availability</a>
-            {% endif %}
-            {% if session['role'] == 'admin' %}
-            <a href="{{ url_for('admin_control') }}" class="btn btn-warning">Admin Control</a>
+
+        {% if session['role'] == 'admin' %}
+        <div class="mb-4">
+            <h3>Admin Panel</h3>
+            <a href="{{ url_for('admin_control') }}" class="btn btn-primary">Go to Admin Control Panel</a>
+        </div>
+        {% endif %}
+
+        <div class="mb-4">
+            <h3>Available Now</h3>
+            {% if available_now %}
+            <ul class="list-group">
+                {% for doctor, end_time in available_now.items() %}
+                <li class="list-group-item bg-available">
+                    <strong>{{ doctor }}</strong> is available until <span class="badge bg-success">{{ end_time }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No doctors are available now.</p>
             {% endif %}
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Available Now</h5>
-                        <ul class="list-group list-group-flush">
-                            {% for doctor, end_time in available_now.items() %}
-                                <li class="list-group-item">{{ doctor }} - Available until {{ end_time }}</li>
-                            {% endfor %}
-                            {% if available_now|length == 0 %}
-                                <li class="list-group-item text-muted">No doctors available</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            {% if session['role'] != 'doctor' %}
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Upcoming Schedules</h5>
-                        <ul class="list-group list-group-flush">
-                            {% for doctor, times in upcoming_scheduled.items() %}
-                                <li class="list-group-item">{{ doctor }} - {{ times[0] }} to {{ times[1] }}</li>
-                            {% endfor %}
-                            {% if upcoming_scheduled|length == 0 %}
-                                <li class="list-group-item text-muted">No upcoming schedules</li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
+        {% if session['role'] != 'doctor' %}
+        <div class="mb-4">
+            <h3>Upcoming Scheduled Availability</h3>
+            {% if upcoming_scheduled %}
+            <ul class="list-group">
+                {% for doctor, (start_time, end_time) in upcoming_scheduled.items() %}
+                <li class="list-group-item bg-upcoming">
+                    <strong>{{ doctor }}</strong> will be available from <span class="badge bg-info">{{ start_time }}</span> to <span class="badge bg-info">{{ end_time }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No upcoming schedules.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="mb-4">
+            <h3>Doctors on Break</h3>
+            {% if breaks %}
+            <ul class="list-group">
+                {% for doctor, break_end in breaks.items() %}
+                <li class="list-group-item bg-break">
+                    <strong>{{ doctor }}</strong> is on break until <span class="badge bg-warning text-dark">{{ break_end }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No doctors are currently on break.</p>
             {% endif %}
         </div>
 
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Breaks</h5>
-                        <ul class="list-group list-group-flush">
-                            {% for doctor, break_end in breaks.items() %}
-                                <li class="list-group-item">{{ doctor }} - On break until {{ break_end }}</li>
-                            {% endfor %}
-                            {% if breaks|length == 0 %}
-                                <li class="list-group-item text-muted">No doctors on break</li>
-                            {% endif %}
-                        </ul>
-                    </div>
+        {% if session['role'] == 'doctor' %}
+        <div class="mb-4">
+            <h3>Select Availability</h3>
+            <form action="{{ url_for('set_availability') }}" method="post">
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" required>
                 </div>
-            </div>
+                <div class="mb-3">
+                    <label for="start_time" class="form-label">Start Time</label>
+                    <input type="time" id="start_time" name="start_time" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="end_time" class="form-label">End Time</label>
+                    <input type="time" id="end_time" name="end_time" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Set Availability</button>
+            </form>
+        </div>
+
+        <div class="mb-4">
+            <h3>Take a Break</h3>
+            <form action="{{ url_for('take_break') }}" method="post">
+                <div class="mb-3">
+                    <label for="break_duration" class="form-label">Break Duration (minutes)</label>
+                    <input type="number" id="break_duration" name="break_duration" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Take Break</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="text-center">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
         </div>
     </div>
 </body>
+
 </html>
+
+
 
 
