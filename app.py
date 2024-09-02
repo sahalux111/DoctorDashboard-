@@ -17,6 +17,10 @@ users = {
 available_doctors = {}
 doctor_breaks = {}
 
+# Adjust time zone to Indian Standard Time (UTC+5:30)
+def get_indian_time():
+    return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
 @app.route('/')
 def index():
     if 'username' in session:
@@ -42,7 +46,7 @@ def dashboard():
     if session['role'] == 'qa_radiographer':
         return redirect(url_for('qa_dashboard'))
 
-    current_time = datetime.now()
+    current_time = get_indian_time()
     available_now = {}
     upcoming_scheduled = {}
     breaks = {}
@@ -87,7 +91,7 @@ def qa_dashboard():
     if 'username' not in session or session['role'] != 'qa_radiographer':
         return redirect(url_for('index'))
 
-    current_time = datetime.now()
+    current_time = get_indian_time()
     available_now = {}
     upcoming_scheduled = {}
     breaks = {}
@@ -148,7 +152,7 @@ def take_break():
     
     doctor = session['username']
     break_duration = int(request.form['break_duration'])
-    break_end_time = datetime.now() + timedelta(minutes=break_duration)
+    break_end_time = get_indian_time() + timedelta(minutes=break_duration)
 
     doctor_breaks[doctor] = break_end_time
 
@@ -185,7 +189,7 @@ def update_break():
 
     doctor = request.form['doctor']
     break_duration = int(request.form['break_duration'])
-    break_end_time = datetime.now() + timedelta(minutes=break_duration)
+    break_end_time = get_indian_time() + timedelta(minutes=break_duration)
 
     doctor_breaks[doctor] = break_end_time
 
@@ -199,6 +203,5 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
