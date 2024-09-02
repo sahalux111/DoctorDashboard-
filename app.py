@@ -29,6 +29,7 @@ users = {
     'ishateam': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'drdeepak': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'drsurendar': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'ukteam': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
 
