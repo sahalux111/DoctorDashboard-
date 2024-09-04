@@ -1,13 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+import threading
+import time
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Simulated database
-from werkzeug.security import generate_password_hash
-
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
     'drmonika': {'password': generate_password_hash('1234'), 'role': 'doctor'},
@@ -34,7 +35,6 @@ users = {
     'teslagroup': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
-
 
 available_doctors = {}
 doctor_breaks = {}
@@ -187,41 +187,30 @@ def admin_control():
     
     return render_template('admin_control.html', users=users)
 
-@app.route('/update_schedule', methods=['POST'])
-def update_schedule():
+@app.route('/add_comment', methods=['POST'])
+def add_comment():
     if 'username' not in session or session['role'] != 'admin':
         return redirect(url_for('index'))
 
     doctor = request.form['doctor']
-    start_date = request.form['start_date']
-    start_time = request.form['start_time']
-    end_time = request.form['end_time']
+    comment = request.form['comment']
 
-    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
-    availability_end = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M')
-
-    available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M'))
+    # Store the comment somewhere, for now, just print
+    print(f"Comment for {doctor}: {comment}")
 
     return redirect(url_for('admin_control'))
 
-@app.route('/update_break', methods=['POST'])
-def update_break():
-    if 'username' not in session or session['role'] != 'admin':
-        return redirect(url_for('index'))
+def keep_awake():
+    while True:
+        try:
+            requests.get("http://your-flask-app-url.com/")
+            print("Ping successful!")
+        except Exception as e:
+            print(f"Ping failed: {e}")
+        time.sleep(60)
 
-    doctor = request.form['doctor']
-    break_duration = int(request.form['break_duration'])
-    break_end_time = get_indian_time() + timedelta(minutes=break_duration)
-
-    doctor_breaks[doctor] = break_end_time
-
-    return redirect(url_for('admin_control'))
-
-@app.route('/logout')
-def logout():
-    session.pop('username', None)
-    session.pop('role', None)
-    return redirect(url_for('index'))
+# Start the keep-awake mechanism in a separate thread
+threading.Thread(target=keep_awake, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(debug=True)
