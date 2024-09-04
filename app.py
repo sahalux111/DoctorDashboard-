@@ -6,6 +6,8 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Simulated database
+from werkzeug.security import generate_password_hash
+
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
     'drmonika': {'password': generate_password_hash('1234'), 'role': 'doctor'},
@@ -33,24 +35,13 @@ users = {
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
 
+
 available_doctors = {}
 doctor_breaks = {}
 
 # Adjust time zone to Indian Standard Time (UTC+5:30)
 def get_indian_time():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
-
-def update_availability_status():
-    current_time = get_indian_time()
-
-    for doctor, (start_time, end_time) in available_doctors.items():
-        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
-
-        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
-            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
-        elif start_time > current_time:
-            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
 @app.route('/')
 def index():
@@ -82,9 +73,6 @@ def dashboard():
     upcoming_scheduled = {}
     breaks = {}
 
-    # Update availability status based on current time
-    update_availability_status()
-
     for doctor, break_end in doctor_breaks.items():
         if current_time >= break_end:
             # Break is over, move the doctor back to available
@@ -98,6 +86,15 @@ def dashboard():
         else:
             # Break is ongoing
             breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
+
+    for doctor, (start_time, end_time) in available_doctors.items():
+        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
+        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
+
+        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
+            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
+        elif start_time > current_time:
+            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
     if session['role'] == 'doctor':
         # Restrict visibility to only the logged-in doctor
@@ -121,9 +118,6 @@ def qa_dashboard():
     upcoming_scheduled = {}
     breaks = {}
 
-    # Update availability status based on current time
-    update_availability_status()
-
     for doctor, break_end in doctor_breaks.items():
         if current_time >= break_end:
             # Break is over, move the doctor back to available
@@ -137,6 +131,15 @@ def qa_dashboard():
         else:
             # Break is ongoing
             breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
+
+    for doctor, (start_time, end_time) in available_doctors.items():
+        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
+        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
+
+        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
+            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
+        elif start_time > current_time:
+            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
     return render_template('qa_dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled=upcoming_scheduled)
 
@@ -222,7 +225,6 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
 
