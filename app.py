@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+import threading
+import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Simulated database
-from werkzeug.security import generate_password_hash
-
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
     'drmonika': {'password': generate_password_hash('1234'), 'role': 'doctor'},
@@ -35,13 +35,36 @@ users = {
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
 
-
 available_doctors = {}
 doctor_breaks = {}
 
 # Adjust time zone to Indian Standard Time (UTC+5:30)
 def get_indian_time():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+def update_doctor_availability():
+    while True:
+        current_time = get_indian_time()
+        for doctor, (start_time, end_time) in available_doctors.items():
+            start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
+            end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
+
+            if start_time <= current_time <= end_time and doctor not in doctor_breaks:
+                # Doctor is available
+                available_doctors[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
+            elif end_time < current_time:
+                # Scheduled time is over
+                if doctor in available_doctors:
+                    del available_doctors[doctor]
+        
+        # Sleep for a minute before checking again
+        time.sleep(60)
+
+@app.before_first_request
+def start_update_thread():
+    thread = threading.Thread(target=update_doctor_availability)
+    thread.daemon = True
+    thread.start()
 
 @app.route('/')
 def index():
@@ -225,5 +248,6 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
