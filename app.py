@@ -203,7 +203,7 @@ def add_comment():
 def keep_awake():
     while True:
         try:
-            requests.get("http://your-flask-app-url.com/")
+            requests.get("https://radblox.onrender.com/")
             print("Ping successful!")
         except Exception as e:
             print(f"Ping failed: {e}")
