@@ -1,8 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-import threading
-import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -42,29 +40,17 @@ doctor_breaks = {}
 def get_indian_time():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
 
-def update_doctor_availability():
-    while True:
-        current_time = get_indian_time()
-        for doctor, (start_time, end_time) in available_doctors.items():
-            start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-            end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
+def update_availability_status():
+    current_time = get_indian_time()
 
-            if start_time <= current_time <= end_time and doctor not in doctor_breaks:
-                # Doctor is available
-                available_doctors[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
-            elif end_time < current_time:
-                # Scheduled time is over
-                if doctor in available_doctors:
-                    del available_doctors[doctor]
-        
-        # Sleep for a minute before checking again
-        time.sleep(60)
+    for doctor, (start_time, end_time) in available_doctors.items():
+        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
+        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
 
-@app.before_first_request
-def start_update_thread():
-    thread = threading.Thread(target=update_doctor_availability)
-    thread.daemon = True
-    thread.start()
+        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
+            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
+        elif start_time > current_time:
+            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
 @app.route('/')
 def index():
@@ -96,6 +82,9 @@ def dashboard():
     upcoming_scheduled = {}
     breaks = {}
 
+    # Update availability status based on current time
+    update_availability_status()
+
     for doctor, break_end in doctor_breaks.items():
         if current_time >= break_end:
             # Break is over, move the doctor back to available
@@ -109,15 +98,6 @@ def dashboard():
         else:
             # Break is ongoing
             breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
-
-    for doctor, (start_time, end_time) in available_doctors.items():
-        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
-
-        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
-            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
-        elif start_time > current_time:
-            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
     if session['role'] == 'doctor':
         # Restrict visibility to only the logged-in doctor
@@ -141,6 +121,9 @@ def qa_dashboard():
     upcoming_scheduled = {}
     breaks = {}
 
+    # Update availability status based on current time
+    update_availability_status()
+
     for doctor, break_end in doctor_breaks.items():
         if current_time >= break_end:
             # Break is over, move the doctor back to available
@@ -154,15 +137,6 @@ def qa_dashboard():
         else:
             # Break is ongoing
             breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
-
-    for doctor, (start_time, end_time) in available_doctors.items():
-        start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
-
-        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
-            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
-        elif start_time > current_time:
-            upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
     return render_template('qa_dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled=upcoming_scheduled)
 
@@ -248,6 +222,7 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
