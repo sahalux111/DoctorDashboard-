@@ -6,6 +6,8 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Simulated database
+from werkzeug.security import generate_password_hash
+
 users = {
     'admin': {'password': generate_password_hash('adminpassword'), 'role': 'admin'},
     'drmonika': {'password': generate_password_hash('1234'), 'role': 'doctor'},
@@ -32,6 +34,7 @@ users = {
     'teslagroup': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
+
 
 available_doctors = {}
 doctor_breaks = {}
@@ -156,15 +159,11 @@ def set_availability():
     start_date = request.form['start_date']
     start_time = request.form['start_time']
     end_time = request.form['end_time']
-
-    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
     
-    # Handle end time on the next day
-    end_datetime = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M')
-    if end_datetime < availability_start:
-        end_datetime += timedelta(days=1)
+    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
+    availability_end = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M')
 
-    available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), end_datetime.strftime('%Y-%m-%d %H:%M'))
+    available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M'))
 
     return redirect(url_for('dashboard'))
 
@@ -188,6 +187,40 @@ def admin_control():
     
     return render_template('admin_control.html', users=users)
 
+@app.route('/update_schedule', methods=['POST'])
+def update_schedule():
+    if 'username' not in session or session['role'] != 'admin':
+        return redirect(url_for('index'))
+
+    doctor = request.form['doctor']
+    start_date = request.form['start_date']
+    start_time = request.form['start_time']
+    end_time = request.form['end_time']
+
+    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
+    availability_end = datetime.strptime(f'{start_date} {end_time}', '%Y-%m-%d %H:%M')
+
+    available_doctors[doctor] = (availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M'))
+
+    return redirect(url_for('admin_control'))
+
+@app.route('/update_break', methods=['POST'])
+def update_break():
+    if 'username' not in session or session['role'] != 'admin':
+        return redirect(url_for('index'))
+
+    doctor = request.form['doctor']
+    break_duration = int(request.form['break_duration'])
+    break_end_time = get_indian_time() + timedelta(minutes=break_duration)
+
+    doctor_breaks[doctor] = break_end_time
+
+    return redirect(url_for('admin_control'))
+    
+@app.route('/keep_alive')
+def keep_alive():
+    return '', 204  # Return a No Content response
+
 @app.route('/logout')
 def logout():
     session.pop('username', None)
@@ -196,7 +229,6 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
 
