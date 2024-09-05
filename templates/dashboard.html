@@ -61,12 +61,27 @@
             max-width: 150px;
         }
     </style>
+
     <!-- Auto-refresh script -->
     <script>
         // Refresh the page every 30 seconds (30000 milliseconds)
-        setTimeout(function(){
+        setTimeout(function() {
             window.location.reload(1);
         }, 30000);
+
+        // Keep-alive function to prevent server from going idle
+        function keepAlive() {
+            setInterval(function() {
+                fetch('/keep_alive') // Send a request to the server
+                    .then(response => response.ok)
+                    .catch(error => console.log('Error with keep-alive:', error));
+            }, 60000); // Send request every 60 seconds
+        }
+
+        // Start the keep-alive function when the page loads
+        window.onload = function() {
+            keepAlive();
+        };
     </script>
 </head>
 
@@ -171,7 +186,6 @@
 </body>
 
 </html>
-
 
 
 
