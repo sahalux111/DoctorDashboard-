@@ -69,6 +69,11 @@ def dashboard():
         return redirect(url_for('qa_dashboard'))
 
     current_time = get_indian_time()
+    
+    # Check if the current time is after 11:59 PM and adjust to the next day
+    if current_time.hour == 23 and current_time.minute >= 59:
+        current_time += timedelta(days=1)
+
     available_now = {}
     upcoming_scheduled = {}
     breaks = {}
