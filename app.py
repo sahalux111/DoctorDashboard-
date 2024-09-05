@@ -216,6 +216,10 @@ def update_break():
     doctor_breaks[doctor] = break_end_time
 
     return redirect(url_for('admin_control'))
+    
+@app.route('/keep_alive')
+def keep_alive():
+    return '', 204  # Return a No Content response
 
 @app.route('/logout')
 def logout():
