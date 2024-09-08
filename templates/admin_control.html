@@ -21,6 +21,9 @@
         .note-card {
             border: 1px solid #007bff;
         }
+        #doctorSelect {
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -28,36 +31,12 @@
         <div class="form-container">
             <h2>Admin Control</h2>
 
-            <!-- Removed Users List Section -->
-            <!--
-            <h5>Users</h5>
-            <ul class="list-group">
-                {% for user, details in users.items() %}
-                    <li class="list-group-item">{{ user }} - Role: {{ details['role'] }}</li>
-                {% endfor %}
-            </ul>
-            -->
-
-            <!-- Removed Doctor Notes Section -->
-            <!--
-            <h5>Doctor Notes</h5>
-            <div class="row">
-                {% for doctor, note in doctor_notes.items() %}
-                    <div class="col-md-4">
-                        <div class="card note-card">
-                            <div class="card-header">{{ doctor }}</div>
-                            <div class="card-body">{{ note }}</div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-            -->
-
             <h5>Add Note</h5>
             <form action="{{ url_for('add_note') }}" method="post">
                 <div class="form-group">
-                    <label for="doctor">Doctor</label>
-                    <select class="form-control" id="doctor" name="doctor" required>
+                    <label for="doctorSearch">Doctor</label>
+                    <input type="text" class="form-control" id="doctorSearch" placeholder="Search for doctor...">
+                    <select class="form-control mt-2" id="doctorSelect" name="doctor" size="5" required>
                         {% for doctor in doctors %}
                             <option value="{{ doctor }}">{{ doctor }}</option>
                         {% endfor %}
@@ -69,11 +48,13 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Add Note</button>
             </form>
+
             <h5>Update Schedule</h5>
             <form action="{{ url_for('update_schedule') }}" method="post">
                 <div class="form-group">
-                    <label for="doctor">Doctor</label>
-                    <select class="form-control" id="doctor" name="doctor" required>
+                    <label for="doctorSearch2">Doctor</label>
+                    <input type="text" class="form-control" id="doctorSearch2" placeholder="Search for doctor...">
+                    <select class="form-control mt-2" id="doctorSelect2" name="doctor" size="5" required>
                         {% for doctor in doctors %}
                             <option value="{{ doctor }}">{{ doctor }}</option>
                         {% endfor %}
@@ -97,11 +78,13 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Update Schedule</button>
             </form>
+
             <h5>Update Break</h5>
             <form action="{{ url_for('update_break') }}" method="post">
                 <div class="form-group">
-                    <label for="doctor">Doctor</label>
-                    <select class="form-control" id="doctor" name="doctor" required>
+                    <label for="doctorSearch3">Doctor</label>
+                    <input type="text" class="form-control" id="doctorSearch3" placeholder="Search for doctor...">
+                    <select class="form-control mt-2" id="doctorSelect3" name="doctor" size="5" required>
                         {% for doctor in doctors %}
                             <option value="{{ doctor }}">{{ doctor }}</option>
                         {% endfor %}
@@ -125,11 +108,40 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Update Break</button>
             </form>
+
             <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
         </div>
     </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add typing filter for each doctor dropdown
+            function addFilter(searchInput, selectBox) {
+                searchInput.addEventListener('input', function () {
+                    const searchTerm = searchInput.value.toLowerCase();
+                    const options = selectBox.options;
+
+                    // Loop through all options and hide those that don't match the search
+                    for (let i = 0; i < options.length; i++) {
+                        const optionText = options[i].text.toLowerCase();
+                        if (optionText.includes(searchTerm)) {
+                            options[i].style.display = ''; // Show the option
+                        } else {
+                            options[i].style.display = 'none'; // Hide the option
+                        }
+                    }
+                });
+            }
+
+            // Apply filters to all doctor fields
+            addFilter(document.getElementById('doctorSearch'), document.getElementById('doctorSelect'));
+            addFilter(document.getElementById('doctorSearch2'), document.getElementById('doctorSelect2'));
+            addFilter(document.getElementById('doctorSearch3'), document.getElementById('doctorSelect3'));
+        });
+    </script>
 </body>
 </html>
