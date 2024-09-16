@@ -227,7 +227,7 @@ def ping_app():
     while True:
         try:
             # Replace with your deployed app's URL
-            requests.get('https://your-app-url.com')
+            requests.get('https://radblox.onrender.com/')
             print("Ping successful!")
         except Exception as e:
             print(f"Ping failed: {e}")
