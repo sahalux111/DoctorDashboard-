@@ -34,8 +34,8 @@ users = {
     'ishateam': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'drdeepak': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'drsurendar': {'password': generate_password_hash('1234'), 'role': 'doctor'},
-    'ukteam': {'password': generate_password_hash('1234'), 'role': 'admin'},
-    'drsnehal': {'password': generate_password_hash('1234'), 'role': 'admin'},
+    'ukteam': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'drsnehal': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'teslagroup': {'password': generate_password_hash('1234'), 'role': 'admin'},
     'pranamika': {'password': generate_password_hash('1234'), 'role': 'admin'},
     'hemanth': {'password': generate_password_hash('1234'), 'role': 'admin'},
@@ -50,6 +50,15 @@ users = {
     'drranoji': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'sunilqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'arunqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'hemanthqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'pranamikaqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'muflihqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'dianaqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'srijeshqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'arumugamqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'titusqa': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'radstar': {'password': generate_password_hash('1234'), 'role': 'doctor'},
+    'soma': {'password': generate_password_hash('1234'), 'role': 'doctor'},
     'qa': {'password': generate_password_hash('qa'), 'role': 'qa_radiographer'}
 }
 
