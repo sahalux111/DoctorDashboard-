@@ -1,7 +1,7 @@
 import time
 import requests
 import mysql.connector
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime, timedelta
 from threading import Thread
 import os
@@ -17,15 +17,27 @@ def get_db_connection():
         password=os.getenv('Radblox!1'),
         database=os.getenv('u953503039_radschedule')
     )
-
+        return connection
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
 
 # Get doctor names from the database
 def get_doctors():
     connection = get_db_connection()
-    cursor = connection.cursor()
-    cursor.execute("SELECT username FROM users WHERE role = 'doctor'")
-    doctors = [row[0] for row in cursor.fetchall()]
-    connection.close()
+    if connection is None:
+        return []
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT username FROM users WHERE role = 'doctor'")
+        doctors = [row[0] for row in cursor.fetchall()]
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        doctors = []
+    finally:
+        connection.close()
+
     return doctors
 
 # Adjust time zone to Indian Standard Time (UTC+5:30)
@@ -44,17 +56,28 @@ def login():
     password = request.form['password']
     
     connection = get_db_connection()
-    cursor = connection.cursor()
-    cursor.execute("SELECT password, role FROM users WHERE username = %s", (username,))
-    user = cursor.fetchone()
-    connection.close()
+    if connection is None:
+        return 'Database connection error', 500
 
-    if user and user[0] == password:  # No password hashing
-        session['username'] = username
-        session['role'] = user[1]
-        return redirect(url_for('dashboard'))
-    
-    return 'Invalid credentials'
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT password, role FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+
+        if user and user[0] == password:  # Compare password directly without hashing
+            session['username'] = username
+            session['role'] = user[1]
+            connection.close()
+
+            return redirect(url_for('dashboard'))  # Successful login, redirect to dashboard
+        else:
+            flash('Invalid credentials', 'danger')
+            return redirect(url_for('index'))
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return 'Database query error', 500
+    finally:
+        connection.close()
 
 @app.route('/dashboard')
 def dashboard():
@@ -67,24 +90,32 @@ def dashboard():
     breaks = {}
 
     connection = get_db_connection()
-    cursor = connection.cursor()
+    if connection is None:
+        return 'Database connection error', 500
 
-    # Get doctors on break
-    cursor.execute("SELECT doctor, break_end FROM doctor_breaks WHERE break_end > %s", (current_time,))
-    doctor_breaks = cursor.fetchall()
+    try:
+        cursor = connection.cursor()
 
-    for doctor, break_end in doctor_breaks:
-        breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
+        # Get doctors on break
+        cursor.execute("SELECT doctor, break_end FROM doctor_breaks WHERE break_end > %s", (current_time,))
+        doctor_breaks = cursor.fetchall()
 
-    # Get available doctors
-    cursor.execute("SELECT doctor, start_time, end_time FROM availability WHERE start_time <= %s AND end_time >= %s", (current_time, current_time))
-    available_doctors = cursor.fetchall()
+        for doctor, break_end in doctor_breaks:
+            breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
 
-    for doctor, start_time, end_time in available_doctors:
-        if doctor not in breaks:
-            available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
+        # Get available doctors
+        cursor.execute("SELECT doctor, start_time, end_time FROM availability WHERE start_time <= %s AND end_time >= %s", (current_time, current_time))
+        available_doctors = cursor.fetchall()
 
-    connection.close()
+        for doctor, start_time, end_time in available_doctors:
+            if doctor not in breaks:
+                available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
+
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return 'Database query error', 500
+    finally:
+        connection.close()
 
     if session['role'] == 'doctor':
         username = session['username']
@@ -118,11 +149,19 @@ def set_availability():
     availability_end = datetime.strptime(f'{end_date} {end_time}', '%Y-%m-%d %H:%M')
 
     connection = get_db_connection()
-    cursor = connection.cursor()
-    cursor.execute("REPLACE INTO availability (doctor, start_time, end_time) VALUES (%s, %s, %s)", 
-                   (doctor, availability_start, availability_end))
-    connection.commit()
-    connection.close()
+    if connection is None:
+        return 'Database connection error', 500
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute("REPLACE INTO availability (doctor, start_time, end_time) VALUES (%s, %s, %s)", 
+                       (doctor, availability_start, availability_end))
+        connection.commit()
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return 'Database query error', 500
+    finally:
+        connection.close()
 
     return redirect(url_for('dashboard'))
 
@@ -136,11 +175,19 @@ def take_break():
     break_end_time = get_indian_time() + timedelta(minutes=break_duration)
 
     connection = get_db_connection()
-    cursor = connection.cursor()
-    cursor.execute("REPLACE INTO doctor_breaks (doctor, break_end) VALUES (%s, %s)", 
-                   (doctor, break_end_time))
-    connection.commit()
-    connection.close()
+    if connection is None:
+        return 'Database connection error', 500
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute("REPLACE INTO doctor_breaks (doctor, break_end) VALUES (%s, %s)", 
+                       (doctor, break_end_time))
+        connection.commit()
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return 'Database query error', 500
+    finally:
+        connection.close()
 
     return redirect(url_for('dashboard'))
 
@@ -161,9 +208,9 @@ def ping_app():
         time.sleep(15)  # Ping every 15 seconds
 
 if __name__ == '__main__':
+    # Start the pinging in a separate thread
     ping_thread = Thread(target=ping_app)
     ping_thread.daemon = True
     ping_thread.start()
 
     app.run(debug=True)
-
