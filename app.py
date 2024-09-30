@@ -11,7 +11,7 @@ app.secret_key = 'your_secret_key'
 # Database connection configuration
 def get_db_connection():
     return mysql.connector.connect(
-        host='127.0.0.1:3306',  # e.g., 'mysql-01.hosting.com'
+        host='https://auth-db1672.hstgr.io/index.php?db=u953503039_radschedule',  # e.g., 'mysql-01.hosting.com'
         user='u953503039_root',
         password='Radblox!1',
         database='u953503039_radschedule'
