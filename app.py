@@ -12,7 +12,7 @@ app.secret_key = 'your_secret_key'
 # MySQL Connection
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.getenv('srv1672.hstgr.io'),
+        host=os.getenv('193.203.184.158'),
         user=os.getenv('u953503039_root'),
         password=os.getenv('Radblox!1'),
         database=os.getenv('u953503039_radschedule')
