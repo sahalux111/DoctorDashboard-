@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Dashboard Application</h1>
+        <p>This is the homepage of the application where users can login, view the dashboard, and access other functionalities.</p>
+
+        <div class="links">
+            <a href="{{ url_for('login') }}">Login</a> |
+            <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+            <a href="{{ url_for('admin_control') }}">Admin Control</a>
+        </div>
+    </div>
+</body>
+</html>
