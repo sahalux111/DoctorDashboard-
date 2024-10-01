@@ -2,18 +2,28 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, redirect, url_for, session
+from datetime import datetime, timedelta
+import requests
+from threading import Thread
+import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Use environment variable for DATABASE_URL
-DATABASE_URL = 'postgresql://sahal:<Y1VxilKjWihuvtrWTgVx7g>@fire-quokka-3404.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full'
+# Use environment variable for DATABASE_URL or fall back to a hardcoded one
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://sahal:<Y1VxilKjWihuvtrWTgVx7g>@fire-quokka-3404.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full')
 
 
 # Function to get a database connection using psycopg2
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL, sslmode='verify-full')
     return conn
+
+# Function to get the current Indian time
+def get_indian_time():
+    utc_now = datetime.utcnow()
+    indian_offset = timedelta(hours=5, minutes=30)
+    return utc_now + indian_offset
 
 # Login route
 @app.route('/login', methods=['POST'])
@@ -33,7 +43,6 @@ def login():
 
     return 'Invalid credentials'
 
-# Additional routes and logic...
 # Dashboard route
 @app.route('/dashboard')
 def dashboard():
@@ -63,7 +72,7 @@ def dashboard():
         start_time = row['start_time']
         end_time = row['end_time']
 
-        if start_time <= current_time <= end_time and row['doctor'] not in doctor_breaks:
+        if start_time <= current_time <= end_time and row['doctor'] not in breaks:
             available_now[row['doctor']] = end_time.strftime('%Y-%m-%d %H:%M')
         elif start_time > current_time:
             upcoming_scheduled[row['doctor']] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
