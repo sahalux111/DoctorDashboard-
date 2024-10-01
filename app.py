@@ -1,66 +1,34 @@
 import time
 import requests
-import mysql.connector
 from flask import Flask, render_template, request, redirect, url_for, session
 from datetime import datetime, timedelta
 from threading import Thread
+import mysql.connector  # MySQL Connector
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Database connection setup
+# Database configuration for Hostinger MySQL
+db_config = {
+    'host': 'srv1672.hstgr.io',
+    'user': 'u953503039_root',
+    'password': 'Radblox!1',
+    'database': 'u953503039_radschedule'
+}
+
+# Helper function to create a database connection
 def get_db_connection():
-    return mysql.connector.connect(
-        host=' srv1672.hstgr.io',         # Replace with your Hostinger DB host
-        user='u953503039_root',     # Replace with your Hostinger DB username
-        password='Radblox!1', # Replace with your Hostinger DB password
-        database='u953503039_radschedule'  # Replace with your Hostinger DB name
-    )
+    return mysql.connector.connect(**db_config)
 
-# Fetch users from database
-def get_users():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT username, role FROM users")
-    users = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {user['username']: {'role': user['role']} for user in users}
-
-# Fetch doctors from database
+# Function to get a list of doctor names from the database
 def get_doctors():
-    users = get_users()
-    return [user for user, details in users.items() if details['role'] == 'doctor']
-
-# Fetch availability for doctors
-def get_availability():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT doctor, start_time, end_time FROM availability")
-    availability = cursor.fetchall()
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT username FROM users WHERE role = 'doctor'")
+    doctors = [row[0] for row in cursor.fetchall()]
     cursor.close()
-    conn.close()
-    return {a['doctor']: (a['start_time'], a['end_time']) for a in availability}
-
-# Fetch breaks for doctors
-def get_breaks():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT doctor, break_end_time FROM breaks")
-    breaks = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {b['doctor']: b['break_end_time'] for b in breaks}
-
-# Fetch notes for doctors
-def get_notes():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT doctor, note FROM notes")
-    notes = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {n['doctor']: n['note'] for n in notes}
+    connection.close()
+    return doctors
 
 # Adjust time zone to Indian Standard Time (UTC+5:30)
 def get_indian_time():
@@ -75,11 +43,18 @@ def index():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form['username']
-    users = get_users()
+    password = request.form['password']
 
-    if username in users:
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+    cursor.close()
+    connection.close()
+
+    if user and user['password'] == password:  # Direct password check (no hashing)
         session['username'] = username
-        session['role'] = users[username]['role']
+        session['role'] = user['role']
         return redirect(url_for('dashboard'))
     return 'Invalid credentials'
 
@@ -91,31 +66,38 @@ def dashboard():
     current_time = get_indian_time()
     available_now = {}
     upcoming_scheduled = {}
-    breaks = get_breaks()
+    breaks = {}
 
-    doctor_breaks = get_breaks()
-    available_doctors = get_availability()
-    
-    for doctor, break_end in doctor_breaks.items():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    # Query for doctor breaks
+    cursor.execute("SELECT doctor, break_end FROM doctor_breaks")
+    doctor_breaks = cursor.fetchall()
+
+    for doctor, break_end in doctor_breaks:
+        break_end = datetime.strptime(break_end, '%Y-%m-%d %H:%M')
         if current_time >= break_end:
-            start_time, end_time = available_doctors.get(doctor, (None, None))
-            if start_time and end_time:
-                start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-                end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
-                if start_time <= current_time <= end_time:
-                    available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
-            del doctor_breaks[doctor]
+            # Remove the doctor from breaks once the break ends
+            cursor.execute("DELETE FROM doctor_breaks WHERE doctor = %s", (doctor,))
         else:
             breaks[doctor] = break_end.strftime('%Y-%m-%d %H:%M')
 
-    for doctor, (start_time, end_time) in available_doctors.items():
+    # Query for available doctors
+    cursor.execute("SELECT doctor, start_time, end_time FROM doctor_availability")
+    doctor_availability = cursor.fetchall()
+
+    for doctor, start_time, end_time in doctor_availability:
         start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
         end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
 
-        if start_time <= current_time <= end_time and doctor not in doctor_breaks:
+        if start_time <= current_time <= end_time and doctor not in breaks:
             available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
         elif start_time > current_time:
             upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
+
+    cursor.close()
+    connection.close()
 
     if session['role'] == 'doctor':
         username = session['username']
@@ -124,7 +106,12 @@ def dashboard():
         return render_template('dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled={})
 
     if session['role'] == 'qa_radiographer' or session['role'] == 'admin':
-        doctor_notes = get_notes()
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT doctor, note FROM doctor_notes")
+        doctor_notes = dict(cursor.fetchall())
+        cursor.close()
+        connection.close()
         return render_template('dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled=upcoming_scheduled, doctor_notes=doctor_notes)
 
 @app.route('/select_availability')
@@ -139,23 +126,23 @@ def select_availability():
 def set_availability():
     if 'username' not in session:
         return redirect(url_for('index'))
-    
+
     doctor = session['username']
     start_date = request.form['start_date']
     start_time = request.form['start_time']
     end_date = request.form['end_date']
     end_time = request.form['end_time']
     
-    availability_start = f'{start_date} {start_time}'
-    availability_end = f'{end_date} {end_time}'
+    availability_start = datetime.strptime(f'{start_date} {start_time}', '%Y-%m-%d %H:%M')
+    availability_end = datetime.strptime(f'{end_date} {end_time}', '%Y-%m-%d %H:%M')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("REPLACE INTO availability (doctor, start_time, end_time) VALUES (%s, %s, %s)", 
-                   (doctor, availability_start, availability_end))
-    conn.commit()
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("REPLACE INTO doctor_availability (doctor, start_time, end_time) VALUES (%s, %s, %s)",
+                   (doctor, availability_start.strftime('%Y-%m-%d %H:%M'), availability_end.strftime('%Y-%m-%d %H:%M')))
+    connection.commit()
     cursor.close()
-    conn.close()
+    connection.close()
 
     return redirect(url_for('dashboard'))
 
@@ -163,45 +150,34 @@ def set_availability():
 def take_break():
     if 'username' not in session:
         return redirect(url_for('index'))
-    
+
     doctor = session['username']
     break_duration = int(request.form['break_duration'])
     break_end_time = get_indian_time() + timedelta(minutes=break_duration)
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("REPLACE INTO breaks (doctor, break_end_time) VALUES (%s, %s)", 
-                   (doctor, break_end_time))
-    conn.commit()
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("REPLACE INTO doctor_breaks (doctor, break_end) VALUES (%s, %s)", (doctor, break_end_time.strftime('%Y-%m-%d %H:%M')))
+    connection.commit()
     cursor.close()
-    conn.close()
+    connection.close()
 
     return redirect(url_for('dashboard'))
-
-@app.route('/admin_control')
-def admin_control():
-    if 'username' not in session or session['role'] != 'admin':
-        return redirect(url_for('index'))
-    
-    doctors = get_doctors()  # Retrieve doctor names
-    users = get_users()
-    doctor_notes = get_notes()
-    return render_template('admin_control.html', users=users, doctor_notes=doctor_notes, doctors=doctors)
 
 @app.route('/add_note', methods=['POST'])
 def add_note():
     if 'username' not in session or session['role'] != 'admin':
         return redirect(url_for('index'))
-    
+
     doctor = request.form['doctor']
     note = request.form['note']
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("REPLACE INTO notes (doctor, note) VALUES (%s, %s)", (doctor, note))
-    conn.commit()
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("REPLACE INTO doctor_notes (doctor, note) VALUES (%s, %s)", (doctor, note))
+    connection.commit()
     cursor.close()
-    conn.close()
+    connection.close()
 
     return redirect(url_for('admin_control'))
 
@@ -228,5 +204,4 @@ if __name__ == '__main__':
     ping_thread.start()
 
     app.run(debug=True)
-
 
