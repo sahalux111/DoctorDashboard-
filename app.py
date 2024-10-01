@@ -7,7 +7,8 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Use environment variable for DATABASE_URL
-DATABASE_URL = os.getenv('postgresql://sahal:<Y1VxilKjWihuvtrWTgVx7g>@fire-quokka-3404.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full')
+DATABASE_URL = 'postgresql://sahal:<Y1VxilKjWihuvtrWTgVx7g>@fire-quokka-3404.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full'
+
 
 # Function to get a database connection using psycopg2
 def get_db_connection():
