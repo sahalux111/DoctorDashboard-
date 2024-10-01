@@ -13,7 +13,6 @@ app.secret_key = 'your_secret_key'
 # Use environment variable for DATABASE_URL or fall back to a hardcoded one
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://sahal:<Y1VxilKjWihuvtrWTgVx7g>@fire-quokka-3404.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full')
 
-
 # Function to get a database connection using psycopg2
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL, sslmode='verify-full')
@@ -24,6 +23,12 @@ def get_indian_time():
     utc_now = datetime.utcnow()
     indian_offset = timedelta(hours=5, minutes=30)
     return utc_now + indian_offset
+
+# Root route (index page)
+@app.route('/')
+@app.route('/index')
+def index():
+    return "Welcome to the Dashboard Application"
 
 # Login route
 @app.route('/login', methods=['POST'])
@@ -190,3 +195,5 @@ if __name__ == '__main__':
     ping_thread.start()
 
     app.run(debug=True)
+
+
