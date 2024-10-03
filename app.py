@@ -94,6 +94,7 @@ def dashboard():
 
     connection = get_db_connection()
     if not connection:
+        logging.error("Database connection failed!")
         return 'Database connection error'
 
     try:
@@ -123,33 +124,45 @@ def dashboard():
             elif start_time > current_time:
                 upcoming_scheduled[doctor] = (start_time.strftime('%Y-%m-%d %H:%M'), end_time.strftime('%Y-%m-%d %H:%M'))
 
-    except mysql.connector.Error as err:
-        logging.error(f"Dashboard query error: {err}")
-        return 'Internal server error'
+    except Exception as e:
+        logging.error(f"Error querying doctor availability or breaks: {e}")
+        return 'Internal server error', 500
     finally:
         cursor.close()
         connection.close()
 
-    if session['role'] == 'doctor':
-        username = session['username']
-        available_now = {username: available_now.get(username)}
-        breaks = {username: breaks.get(username)}
-        return render_template('dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled={})
-
+    # If admin or QA role, fetch doctor notes
     if session['role'] in ['qa_radiographer', 'admin']:
         try:
             connection = get_db_connection()
             cursor = connection.cursor()
             cursor.execute("SELECT doctor, note FROM doctor_notes")
             doctor_notes = dict(cursor.fetchall())
-        except mysql.connector.Error as err:
-            logging.error(f"Error fetching doctor notes: {err}")
-            doctor_notes = {}
+        except Exception as e:
+            logging.error(f"Error fetching doctor notes: {e}")
+            doctor_notes = {}  # Handle case when no notes are found or query fails
         finally:
             cursor.close()
             connection.close()
 
-        return render_template('dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled=upcoming_scheduled, doctor_notes=doctor_notes)
+        return render_template(
+            'dashboard.html', 
+            available_now=available_now, 
+            breaks=breaks, 
+            upcoming_scheduled=upcoming_scheduled, 
+            doctor_notes=doctor_notes
+        )
+
+    # For non-admin roles (doctors), restrict dashboard content
+    if session['role'] == 'doctor':
+        username = session['username']
+        available_now = {username: available_now.get(username)}
+        breaks = {username: breaks.get(username)}
+        return render_template('dashboard.html', available_now=available_now, breaks=breaks, upcoming_scheduled={})
+
+    # Handle unexpected roles
+    logging.error(f"Unauthorized access attempt by role: {session['role']}")
+    return 'Unauthorized', 403
 
 @app.route('/select_availability')
 def select_availability():
