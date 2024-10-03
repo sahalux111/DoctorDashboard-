@@ -105,7 +105,9 @@ def dashboard():
         doctor_breaks = cursor.fetchall()
 
         for doctor, break_end in doctor_breaks:
-            break_end = datetime.strptime(break_end, '%Y-%m-%d %H:%M')
+            # Check if the returned break_end is already a datetime object
+            if isinstance(break_end, str):
+                break_end = datetime.strptime(break_end, '%Y-%m-%d %H:%M')  # Only parse if it's a string
             if current_time >= break_end:
                 cursor.execute("DELETE FROM doctor_breaks WHERE doctor = %s", (doctor,))
             else:
@@ -116,9 +118,7 @@ def dashboard():
         doctor_availability = cursor.fetchall()
 
         for doctor, start_time, end_time in doctor_availability:
-            start_time = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
-            end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M')
-
+            # No need to parse, just check directly since start_time and end_time are likely already datetime objects
             if start_time <= current_time <= end_time and doctor not in breaks:
                 available_now[doctor] = end_time.strftime('%Y-%m-%d %H:%M')
             elif start_time > current_time:
